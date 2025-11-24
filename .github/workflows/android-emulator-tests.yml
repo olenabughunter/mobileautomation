@@ -1,0 +1,44 @@
+name: Android Emulator Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  android-emulator:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Appium
+        run: npm install -g appium@2 || true
+
+      - name: Start Appium
+        run: |
+          nohup appium --address 127.0.0.1 --port 4723 > appium.log 2>&1 &
+          sleep 3
+
+      - name: Run Android emulator and tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          arch: x86_64
+          target: default
+          emulator-options: -no-window -no-audio -no-boot-anim
+          script: |
+            echo "Emulator started"
+            adb devices
+            cd mobile-automation/EurodreamsTests
+            mvn -B test -Dtest=SimpleAppiumTestIT
