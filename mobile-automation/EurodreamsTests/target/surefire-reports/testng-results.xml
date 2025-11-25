@@ -2,20 +2,20 @@
 <testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
-  <suite started-at="2025-11-24T16:05:04 CET" name="Surefire suite" finished-at="2025-11-24T16:05:30 CET" duration-ms="26032">
+  <suite started-at="2025-11-25T09:49:02 CET" name="Surefire suite" finished-at="2025-11-25T09:50:05 CET" duration-ms="62774">
     <groups>
     </groups>
-    <test started-at="2025-11-24T16:05:04 CET" name="Surefire test" finished-at="2025-11-24T16:05:30 CET" duration-ms="26032">
+    <test started-at="2025-11-25T09:49:02 CET" name="Surefire test" finished-at="2025-11-25T09:50:05 CET" duration-ms="62774">
       <class name="com.example.eurodreamstests.SimpleAppiumTestIT">
-        <test-method is-config="true" signature="setUp()[pri:0, instance:com.example.eurodreamstests.SimpleAppiumTestIT@3a4e524]" started-at="2025-11-24T16:05:04 CET" name="setUp" finished-at="2025-11-24T16:05:07 CET" duration-ms="3064" status="PASS">
+        <test-method is-config="true" signature="setUp()[pri:0, instance:com.example.eurodreamstests.SimpleAppiumTestIT@7cf63b9a]" started-at="2025-11-25T09:49:02 CET" name="setUp" finished-at="2025-11-25T09:49:04 CET" duration-ms="1827" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- setUp -->
-        <test-method signature="sampleTest()[pri:0, instance:com.example.eurodreamstests.SimpleAppiumTestIT@3a4e524]" started-at="2025-11-24T16:05:07 CET" name="sampleTest" finished-at="2025-11-24T16:05:10 CET" duration-ms="2274" status="PASS">
+        <test-method signature="fullScenarioTest()[pri:0, instance:com.example.eurodreamstests.SimpleAppiumTestIT@7cf63b9a]" started-at="2025-11-25T09:49:04 CET" name="fullScenarioTest" finished-at="2025-11-25T09:50:05 CET" duration-ms="60686" status="PASS">
           <reporter-output>
           </reporter-output>
-        </test-method> <!-- sampleTest -->
-        <test-method is-config="true" signature="tearDown()[pri:0, instance:com.example.eurodreamstests.SimpleAppiumTestIT@3a4e524]" started-at="2025-11-24T16:05:10 CET" name="tearDown" finished-at="2025-11-24T16:05:30 CET" duration-ms="20682" status="PASS">
+        </test-method> <!-- fullScenarioTest -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:com.example.eurodreamstests.SimpleAppiumTestIT@7cf63b9a]" started-at="2025-11-25T09:50:05 CET" name="tearDown" finished-at="2025-11-25T09:50:05 CET" duration-ms="199" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- tearDown -->

@@ -5,6 +5,7 @@ import io.appium.java_client.android.AndroidDriver;
 import io.appium.java_client.android.options.UiAutomator2Options;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.By;
+import org.openqa.selenium.OutputType;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.testng.annotations.AfterClass;
@@ -14,7 +15,16 @@ import org.testng.annotations.Test;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
+import java.io.ByteArrayInputStream;
 
+import io.qameta.allure.Description;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
+import io.qameta.allure.Allure;
+import org.testng.annotations.Listeners;
+
+@Listeners({io.qameta.allure.testng.AllureTestNg.class})
 public class SimpleAppiumTestIT {
     private AndroidDriver driver;
 
@@ -23,81 +33,106 @@ public class SimpleAppiumTestIT {
         UiAutomator2Options options = new UiAutomator2Options()
                 .setPlatformName("Android")
                 .setAutomationName("UiAutomator2")
-                .setDeviceName("Pixel_9_Pro_XL")
+                .setDeviceName("Pixel_9")
                 .setUdid("emulator-5554")
-                // Provide either an .apk path or the appPackage/appActivity if app is already on device
-                // .setApp("/path/to/app.apk")
-                .setAppPackage("com.loro.app.retail")
-                .setAppActivity(".ui.home.RetailActivity")
+                // Target app package requested by the task
+                .setAppPackage("com.loro.app.retail.jint")
                 .setNoReset(true)
-                .setAdbExecTimeout(Duration.ofSeconds(120))
+                .setAdbExecTimeout(Duration.ofSeconds(300))
                 .setNewCommandTimeout(Duration.ofSeconds(300));
 
         driver = new AndroidDriver(new URL("http://127.0.0.1:4723/"), options);
     }
 
     @Test
-    public void fullScenarioTest() {
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+    @Feature("Settings navigation")
+    @Description("Start the app, find the settings button on home page (may be in French) and click it. Retry up to 3 times before reporting stuck.")
+    @Severity(SeverityLevel.CRITICAL)
+    public void openSettingsFromHome() {
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(12));
+
         try {
-            // Ensure app is active
-            String pkg = driver.getCurrentPackage();
-            String act = driver.currentActivity();
-            System.out.println("Current package: " + pkg + ", activity: " + act);
-
-            if (!pkg.equals("com.loro.app.retail")) {
-                System.out.println("Target app not active; attempting to start it via activity.");
-                driver.activateApp("com.loro.app.retail");
-                Thread.sleep(1500);
+            // Ensure target app is active
+            try {
+                driver.activateApp("com.loro.app.retail.jint");
+            } catch (Exception e) {
+                // If activateApp is not available or fails, continue and rely on capabilities
+                System.out.println("activateApp failed or not supported: " + e.getMessage());
             }
 
-            // 1) Close basket dialog if visible
-            By closeBasket = AppiumBy.id("basket_close_button");
-            try {
-                wait.until(ExpectedConditions.elementToBeClickable(closeBasket));
-                WebElement close = driver.findElement(closeBasket);
-                close.click();
-                System.out.println("Closed basket dialog.");
-            } catch (Exception ignored) {
-                System.out.println("Basket close button not present, continuing.");
+            // Candidate locators (IDs, accessibility ids, and text in French/English)
+            By[] candidates = new By[]{
+                    // resource id variants (fully-qualified if available)
+                    AppiumBy.id("com.loro.app.retail:id/settings_button"),
+                    AppiumBy.id("com.loro.app.retail.jint:id/settings_button"),
+                    AppiumBy.accessibilityId("Paramètres"),
+                    AppiumBy.accessibilityId("Réglages"),
+                    AppiumBy.accessibilityId("Settings"),
+                    // XPath/text contains (covers French labels like "Paramètres" or "Réglages")
+                    AppiumBy.xpath("//*[contains(@text, 'Param') or contains(@text, 'Régl') or contains(@text, 'Settings')]")
+            };
+
+            boolean clicked = false;
+            int maxAttempts = 3;
+
+            for (int attempt = 1; attempt <= maxAttempts && !clicked; attempt++) {
+                Allure.step("Attempt " + attempt + " to find and click settings button");
+                System.out.println("Attempt " + attempt + " to find settings");
+
+                for (By locator : candidates) {
+                    try {
+                        wait.until(ExpectedConditions.elementToBeClickable(locator));
+                        WebElement el = driver.findElement(locator);
+                        el.click();
+                        clicked = true;
+                        Allure.step("Clicked settings using locator: " + locator.toString());
+                        attachScreenshot("after_click_attempt_" + attempt);
+                        break;
+                    } catch (Exception e) {
+                        // not found/clickable with this locator, continue to next
+                        System.out.println("Locator not clickable/found: " + locator.toString() + " - " + e.getMessage());
+                    }
+                }
+
+                if (!clicked) {
+                    // Wait a bit and capture state
+                    try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+                    attachScreenshot("attempt_failed_state_" + attempt);
+                }
             }
 
-            // 2) Edit stake input if present
-            By stakeInput = AppiumBy.id("basket_bet_input_stake_0");
-            try {
-                wait.until(ExpectedConditions.visibilityOfElementLocated(stakeInput));
-                WebElement stake = driver.findElement(stakeInput);
-                stake.clear();
-                stake.sendKeys("100");
-                System.out.println("Set stake to 100.");
-            } catch (Exception ignored) {
-                System.out.println("Stake input not present, continuing.");
+            if (!clicked) {
+                String msg = "Stuck: could not find/click settings after " + maxAttempts + " attempts";
+                Allure.step(msg);
+                attachScreenshot("stuck_final_state");
+                throw new RuntimeException(msg);
             }
 
-            // 3) Click QR generator button
-            By qrBtn = AppiumBy.id("qr_generator_button");
+            // Verify settings page opened - look for typical French/English labels on settings page
+            By settingsHeader = AppiumBy.xpath("//*[contains(@text, 'Param') or contains(@text, 'Régl') or contains(@text, 'Settings') or contains(@content-desc, 'Param')]");
             try {
-                wait.until(ExpectedConditions.elementToBeClickable(qrBtn));
-                WebElement qr = driver.findElement(qrBtn);
-                qr.click();
-                System.out.println("Clicked QR generator button.");
-            } catch (Exception ignored) {
-                System.out.println("QR button not present or not clickable.");
-            }
-
-            // 4) Small verification: read possible gains text if visible
-            By gains = AppiumBy.id("gains_value");
-            try {
-                wait.until(ExpectedConditions.visibilityOfElementLocated(gains));
-                WebElement gv = driver.findElement(gains);
-                System.out.println("Gains text: " + gv.getText());
-            } catch (Exception ignored) {
-                System.out.println("Gains text not found.");
+                wait.withTimeout(Duration.ofSeconds(10)).until(ExpectedConditions.visibilityOfElementLocated(settingsHeader));
+                Allure.step("Settings page appeared");
+                attachScreenshot("settings_page_opened");
+            } catch (Exception e) {
+                attachScreenshot("settings_missing_after_click");
+                throw new RuntimeException("Settings page did not open or header not found: " + e.getMessage());
             }
 
         } catch (Exception e) {
-            System.out.println("Test scenario failed: " + e.getMessage());
-            throw new RuntimeException(e);
+            // Attach final screenshot and rethrow so CI picks up failure
+            try { attachScreenshot("error_final"); } catch (Exception ignored) {}
+            Allure.step("Test failed: " + e.getMessage());
+            throw e instanceof RuntimeException ? (RuntimeException)e : new RuntimeException(e);
+        }
+    }
+
+    private void attachScreenshot(String name) {
+        try {
+            byte[] bytes = driver.getScreenshotAs(OutputType.BYTES);
+            Allure.addAttachment(name + ".png", new ByteArrayInputStream(bytes));
+        } catch (Exception e) {
+            System.out.println("Failed to take/attach screenshot: " + e.getMessage());
         }
     }
 

@@ -1,0 +1,98 @@
+name: Android Appium tests + Allure
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+concurrency:
+  group: android-appium-allure
+  cancel-in-progress: true
+
+jobs:
+  android-appium-allure:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ADB_SERVER_PORT: 5037
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Start Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: default
+          arch: x86_64
+          profile: Pixel_4
+          emulator-options: -no-window -gpu swiftshader_indirect
+          force-avd-creation: true
+          script: |
+            echo "Emulator started"
+
+      - name: Install Appium
+        run: |
+          npm ci --no-audit --no-fund
+          npm install -g appium@3.1.1
+
+      - name: Start Appium server in background
+        run: |
+          nohup appium --address 127.0.0.1 --port 4723 &> appium.log &
+          for i in {1..20}; do
+            if curl -sS http://127.0.0.1:4723/status | grep -q "ready"; then
+              echo "Appium ready"; break
+            fi
+            echo "Waiting for Appium... ($i)"; sleep 3
+          done
+
+      - name: Run Maven tests
+        run: |
+          mvn -B -f mobile-automation/EurodreamsTests/pom.xml -Dtest=SimpleAppiumTestIT test -Dallure.results.directory=mobile-automation/EurodreamsTests/target/allure-results
+        timeout-minutes: 20
+
+      - name: Generate Allure report
+        run: |
+          npm install -g allure-commandline@2.20.1 --no-audit --no-fund
+          mkdir -p mobile-automation/EurodreamsTests/target/allure-report
+          allure generate mobile-automation/EurodreamsTests/target/allure-results -o mobile-automation/EurodreamsTests/target/allure-report --clean || true
+
+      - name: Upload Allure results artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: mobile-automation/EurodreamsTests/target/allure-results
+
+      - name: Upload Allure report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: mobile-automation/EurodreamsTests/target/allure-report
+
+      - name: Upload Appium log
+        uses: actions/upload-artifact@v4
+        with:
+          name: appium-log
+          path: appium.log

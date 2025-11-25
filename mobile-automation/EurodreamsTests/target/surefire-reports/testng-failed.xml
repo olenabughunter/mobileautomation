@@ -5,7 +5,7 @@
     <classes>
       <class name="com.example.eurodreamstests.SimpleAppiumTestIT">
         <methods>
-          <include name="sampleTest"/>
+          <include name="fullScenarioTest"/>
           <include name="setUp"/>
           <include name="tearDown"/>
         </methods>

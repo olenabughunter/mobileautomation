@@ -35,6 +35,14 @@
             <artifactId>slf4j-simple</artifactId>
             <version>2.0.7</version>
         </dependency>
+
+        <!-- Allure TestNG integration (free and widely used) -->
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-testng</artifactId>
+            <version>2.20.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -59,6 +67,16 @@
                     </includes>
                     <useSystemClassLoader>true</useSystemClassLoader>
                     <forkCount>0</forkCount>
+                </configuration>
+            </plugin>
+
+            <!-- Allure Maven plugin to generate reports (optional; report generation can also be run via CLI) -->
+            <plugin>
+                <groupId>io.qameta.allure</groupId>
+                <artifactId>allure-maven</artifactId>
+                <version>2.11.2</version>
+                <configuration>
+                    <reportVersion>2.20.1</reportVersion>
                 </configuration>
             </plugin>
         </plugins>
